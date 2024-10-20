@@ -44,9 +44,6 @@ if (APPLE)
     set(APPLE_ICON ${CMAKE_CURRENT_SOURCE_DIR}/assets/spc.icns)
     set_source_files_properties(${APPLE_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 
-    # Executable
-    add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${APPLE_ICON} ${game_audio} src/main.cpp)
-
     # Game audio
     file(GLOB_RECURSE game_audio "${CMAKE_SOURCE_DIR}/assets/audio/*.wav")
     foreach (FILE ${game_audio})
@@ -57,6 +54,9 @@ if (APPLE)
                 MACOSX_PACKAGE_LOCATION "Resources/audio/${NEW_FILE_PATH}"
         )
     endforeach()
+
+    # Executable
+    add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${APPLE_ICON} ${game_audio} src/main.cpp)
 
     # Adding our source files
     file(GLOB PROJECT_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/src/*.cpp")
