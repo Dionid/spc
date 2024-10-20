@@ -19,15 +19,16 @@ static long get_mem_usage() {
 class Debugger {
     public:
         void DrawDebugInfo() {
-            DrawText(
-                TextFormat(
-                    "Debug mode (%d)", getpid()
-                ),
-                10,
-                10,
-                15,
-                WHITE
-            );
+            // TODO: RETURN
+            // DrawText(
+            //     TextFormat(
+            //         "Debug mode (%d)", getpid()
+            //     ),
+            //     10,
+            //     10,
+            //     15,
+            //     WHITE
+            // );
             DrawText(
                 TextFormat("Mem: %.2f MB", get_mem_usage() / 1000000.0f),
                 10,

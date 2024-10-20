@@ -111,6 +111,11 @@ namespace cen {
                 // # Collision
                 this->collisionEngine->NarrowCollisionCheckNaive(this->nodeStorage.get());
             }
+
+            template <typename T>
+            T* AddNode(std::unique_ptr<T> newNode) {
+                return this->nodeStorage->AddNode(std::move(newNode));
+            }
     };
 
     class LocalScene: public Scene {
@@ -123,7 +128,7 @@ namespace cen {
                 RenderingEngine2D* renderingEngine,
                 cen::EventBus* eventBus,
                 int simulationFrameRate = 60,
-                int simulationFixedFrameRate = 40,
+                int simulationFixedFrameRate = 50,
                 int fixedSimulationFrameCyclesLimit = 10,
                 cen::PlayerInputManager playerInputManager = cen::PlayerInputManager{},
                 std::unique_ptr<cen::CollisionEngine> collisionEngine = std::make_unique<cen::CollisionEngine>(),

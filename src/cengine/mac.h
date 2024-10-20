@@ -1,6 +1,6 @@
 
-#ifndef SPC_MAC_H_
-#define SPC_MAC_H_
+#ifndef CEN_MAC_H_
+#define CEN_MAC_H_
 
 namespace cen {
 
@@ -8,7 +8,7 @@ namespace macutils {
     #include <string>
     #include <CoreFoundation/CoreFoundation.h>
 
-    std::string GetResourcePath(const std::string& resource) {
+    static std::string GetResourcePath(const std::string& resource) {
         CFBundleRef bundle = CFBundleGetMainBundle();
         CFURLRef resourceURL = CFBundleCopyResourceURL(bundle, CFStringCreateWithCString(nullptr, resource.c_str(), kCFStringEncodingUTF8), nullptr, nullptr);
         
@@ -22,4 +22,4 @@ namespace macutils {
 
 }
 
-#endif // SPC_MAC_H_
+#endif // CEN_MAC_H_

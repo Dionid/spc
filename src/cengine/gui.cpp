@@ -1,5 +1,6 @@
 
 #include "gui.h"
+#include "scene.h"
 
 namespace cen {
 
@@ -10,7 +11,7 @@ Btn::Btn(
     cen::Size size = cen::Size{ 0, 0 },
     Vector2 anchor = Vector2{ 1, 1 },
     Callbacks callbacks = Callbacks()
-): cen::Node2D(position) {
+): cen::Node2D(position, false) {
     this->callbacks = callbacks;
     this->text = btnText;
     this->fontSize = btnTextFontSize;
@@ -36,7 +37,7 @@ Btn::Btn(
 void Btn::Update() {
     state = BtnState::Normal;
 
-    Vector2 mousePoint = GetMousePosition();
+    Vector2 mousePoint = GetScreenToWorld2D(GetMousePosition(), *this->scene->camera);
 
     // Check button state
     if (CheckCollisionPointRec(mousePoint, btnRect))

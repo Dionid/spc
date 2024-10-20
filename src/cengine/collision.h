@@ -152,7 +152,7 @@ class Collider: public Node2D {
             return Collider::_tid;
         }
 
-        Collider(ColliderType type, Shape shape, Vector2 position = Vector2{}, int zOrder = 0, uint16_t id = 0, Node* parent = nullptr): Node2D(position, zOrder, id, parent) {
+        Collider(ColliderType type, Shape shape, Vector2 position = Vector2{}, bool ySort = false, int zOrder = 0, uint16_t id = 0, Node* parent = nullptr): Node2D(position, ySort, zOrder, id, parent) {
             this->type = type;
             this->shape = shape;
         }
@@ -177,11 +177,45 @@ class CollisionObject2D: public Node2D {
             return CollisionObject2D::_tid;
         }
 
-        CollisionObject2D(Vector2 position, int zOrder = 0, uint16_t id = 0, Node* parent = nullptr): Node2D(position, zOrder, id, parent) {}
+        CollisionObject2D(Vector2 position, bool ySort = false, int zOrder = 0, uint16_t id = 0, Node* parent = nullptr): Node2D(position, ySort, zOrder, id, parent) {}
         
         virtual void OnCollision(Collision c) {}
         virtual void OnCollisionStarted(Collision c) {}
         virtual void OnCollisionEnded(Collision c) {}
+};
+
+// # Custom CollisionObject2D
+
+class RectangleCollisionObject2D: public CollisionObject2D {
+    public:
+        static const uint64_t _tid;
+        cen::Size size;
+        ColliderType type;
+
+        cen::type_id_t TypeId() const override {
+            return RectangleCollisionObject2D::_tid;
+        }
+
+        RectangleCollisionObject2D(
+            Vector2 position,
+            ColliderType type,
+            cen::Size size,
+            bool ySort = false,
+            int zOrder = 0,
+            uint16_t id = 0,
+            Node* parent = nullptr
+        ): CollisionObject2D(position, ySort, zOrder, id, parent) {
+            this->size = size;
+        }
+
+        void Init() override {
+            auto collider = std::make_unique<Collider>(
+                this->type,
+                Shape::Rectangle(this->size)
+            );
+
+            this->AddNode(std::move(collider));
+        }
 };
 
 // # Checks

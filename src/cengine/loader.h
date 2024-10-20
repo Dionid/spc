@@ -1,5 +1,5 @@
-#ifndef SPC_LOADER_H_
-#define SPC_LOADER_H_
+#ifndef CEN_LOADER_H_
+#define CEN_LOADER_H_
 
 #include <string>
 #include "mac.h"
@@ -10,7 +10,7 @@
 
 namespace cen {
 
-std::string GetResourcePath(const std::string& resource) {
+static std::string GetResourcePath(const std::string& resource) {
     if (__APPLE__) {
         return cen::macutils::GetResourcePath(resource);
     } else {
@@ -20,4 +20,4 @@ std::string GetResourcePath(const std::string& resource) {
 
 }
 
-#endif // SPC_LOADER_H_
+#endif // CEN_LOADER_H_

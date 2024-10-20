@@ -14,10 +14,13 @@
 
 namespace cen {
 
+#define render_buffer std::vector<std::unique_ptr<CanvasItem2D>>
+
 class CanvasItem2D {
     public:
         node_id_t id;
         int zOrder;
+        bool ySort;
         Vector2 position;
         float alpha;
 
@@ -25,12 +28,14 @@ class CanvasItem2D {
             Vector2 position,
             float alpha,
             int zOrder,
+            bool ySort = false,
             uint16_t id = 0
         ) {
             this->position = position;
             this->zOrder = zOrder;
             this->alpha = alpha;
             this->id = id;
+            this->ySort = ySort;
         }
 
         virtual ~CanvasItem2D() {}
@@ -49,8 +54,9 @@ class LineCanvasItem2D: public CanvasItem2D {
             Color color = WHITE,
             float alpha = 1.0f,
             int zOrder = 0,
+            bool ySort = false,
             uint16_t id = 0
-        ): CanvasItem2D(position, alpha, zOrder, id) {
+        ): CanvasItem2D(position, alpha, zOrder, ySort, id) {
             this->length = length;
             this->alpha = alpha;
             this->color = color;
@@ -77,10 +83,10 @@ class CircleCanvasItem2D: public CanvasItem2D {
             float alpha = 1.0f,
             bool fill = true,
             int zOrder = 0,
+            bool ySort = false,
             uint16_t id = 0
-        ): CanvasItem2D(position, alpha, zOrder, id) {
+        ): CanvasItem2D(position, alpha, zOrder, ySort, id) {
             this->radius = radius;
-            this->alpha = alpha;
             this->color = color;
             this->fill = fill;
         }
@@ -106,8 +112,9 @@ class RectangleCanvasItem2D: public CanvasItem2D {
             Color color = WHITE,
             float alpha = 1.0f,
             int zOrder = 0,
+            bool ySort = false,
             uint16_t id = 0
-        ): CanvasItem2D(position, alpha, zOrder, id) {
+        ): CanvasItem2D(position, alpha, zOrder, ySort, id) {
             this->size = size;
             this->color = color;
         }
@@ -134,8 +141,9 @@ class ButtonCanvasItem2D: public CanvasItem2D {
             Vector2 anchor,
             float alpha = 1.0f,
             int zOrder = 0,
+            bool ySort = false,
             node_id_t id = 0
-        ): CanvasItem2D(position, alpha, zOrder, id) {
+        ): CanvasItem2D(position, alpha, zOrder, ySort, id) {
             this->state = state;
             this->text = btnText;
             this->fontSize = btnTextFontSize;
@@ -157,7 +165,8 @@ class ButtonCanvasItem2D: public CanvasItem2D {
             };
         }
 
-        void Render() override {            switch (state) {
+        void Render() override {
+            switch (state) {
                 case BtnState::Normal:
                     DrawRectangleRec(
                         btnRect,
@@ -201,8 +210,10 @@ class TextCanvasItem2D: public CanvasItem2D {
             int fontSize,
             Color color,
             float alpha = 1.0f,
-            int zOrder = 0
-        ): CanvasItem2D(position, alpha, zOrder) {
+            int zOrder = 0,
+            bool ySort = false,
+            uint16_t id = 0
+        ): CanvasItem2D(position, alpha, zOrder, ySort, id) {
             this->text = text;
             this->fontSize = fontSize;
             this->color = color;
@@ -219,7 +230,47 @@ class TextCanvasItem2D: public CanvasItem2D {
         }
 };
 
-#define render_buffer std::vector<std::unique_ptr<CanvasItem2D>>
+// # TileMapLayer
+
+class TextureCanvasItem2D: public CanvasItem2D {
+    public:
+        Rectangle texturePosition;
+        Size size;
+        Texture texture;
+
+        TextureCanvasItem2D(
+            Texture texture,
+            Rectangle texturePosition,
+            Vector2 position,
+            Size size,
+            float alpha = 1.0f,
+            int zOrder = 0,
+            bool ySort = false,
+            uint16_t id = 0
+        ): CanvasItem2D(position, alpha, zOrder, ySort, id) {
+            this->texturePosition = texturePosition;
+            this->size = size;
+            this->texture = texture;
+        }
+
+        void Render() override {
+            DrawTexturePro(
+                texture,
+                texturePosition,
+                Rectangle{
+                    position.x,
+                    position.y,
+                    size.width,
+                    size.height
+                },
+                Vector2{0, 0},
+                0.0f,
+                WHITE
+            );
+        }
+};
+
+// # Rendering Engine
 
 class RenderingEngine2D {
     private:
@@ -228,6 +279,12 @@ class RenderingEngine2D {
     public:
         render_buffer firstBuffer;
         render_buffer secondBuffer;
+        Camera2D* camera;
+
+        RenderingEngine2D(Camera2D* camera) {
+            this->camera = camera;
+            this->activeRenderBufferInd.store(0, std::memory_order_release);
+        }
 
         void MapNode2D(
             render_buffer& activeRenderBuffer,
@@ -285,7 +342,10 @@ class RenderingEngine2D {
                         buttonView->text,
                         buttonView->fontSize,
                         buttonView->size,
-                        buttonView->anchor
+                        buttonView->anchor,
+                        1.0f,
+                        buttonView->zOrder,
+                        buttonView->id
                     )
                 );
             } else if (auto textView = dynamic_cast<cen::TextView*>(node2D)) {
@@ -294,7 +354,24 @@ class RenderingEngine2D {
                         newGlobalPosition,
                         std::string(textView->text).c_str(),
                         textView->fontSize,
-                        textView->color
+                        textView->color,
+                        1.0f,
+                        textView->zOrder,
+                        textView->ySort,
+                        textView->id
+                    )
+                );
+            } else if (auto tileView = dynamic_cast<cen::TextureView*>(node2D)) {
+                activeRenderBuffer.push_back(
+                    std::make_unique<TextureCanvasItem2D>(
+                        tileView->texture,
+                        tileView->texturePosition,
+                        newGlobalPosition,
+                        tileView->size,
+                        1.0f,
+                        tileView->zOrder,
+                        tileView->ySort,
+                        tileView->id
                     )
                 );
             }
@@ -319,7 +396,7 @@ class RenderingEngine2D {
                 );
             }
 
-            std::sort(writeBuffer.begin(),writeBuffer.end(), [](const std::unique_ptr<cen::CanvasItem2D>& a, const std::unique_ptr<cen::CanvasItem2D>& b) {
+            std::sort(writeBuffer.begin(), writeBuffer.end(), [](const std::unique_ptr<cen::CanvasItem2D>& a, const std::unique_ptr<cen::CanvasItem2D>& b) {
                 return a->zOrder < b->zOrder;
             });
 
@@ -353,7 +430,9 @@ class RenderingEngine2D {
             {
                 BeginDrawing();
                     ClearBackground(BLACK);
+                    BeginMode2D(*camera);
                     this->Render();
+                    EndMode2D();
                     debugger.Render();
                 EndDrawing();
             }

@@ -32,10 +32,11 @@ class CharacterBody2D: public CollisionObject2D {
             MotionMode motionMode = MotionMode::Floating,
             Vector2 up = cen::Vector2Up,
             float skinWidth = 0.1f,
+            bool ySort = false,
             int zOrder = 0,
             uint16_t id = 0,
             Node* parent = nullptr
-        ) : CollisionObject2D(position, zOrder, id, parent) {
+        ) : CollisionObject2D(position, ySort, zOrder, id, parent) {
             this->size = size;
             this->velocity = velocity;
         }
@@ -72,69 +73,76 @@ class CharacterBody2D: public CollisionObject2D {
                     continue;
                 }
 
+                // TODO: change to flatNodes iteration
                 for (const auto& otherNode: this->scene->nodeStorage->rootNodes) {
                     if (this == otherNode.get()) {
                         continue;
                     }
 
-                    auto otherCollisionObject = otherNode->GetFirstByType<CollisionObject2D>();
+                    std::vector<CollisionObject2D*> otherCollisionObjectsList = std::vector<CollisionObject2D*>{};
 
-                    if (otherCollisionObject == nullptr) {
-                        continue;
-                    }
+                    otherNode->GetChildByTypeDeep<CollisionObject2D>(otherCollisionObjectsList);
 
-                    for (const auto& otherN: otherCollisionObject->children) {
-                        auto otherCollider = dynamic_cast<Collider*>(otherN.get());
+                    for (const auto& otherCollisionObject: otherCollisionObjectsList) {
+                        for (const auto& otherN: otherCollisionObject->children) {
+                            auto otherCollider = dynamic_cast<Collider*>(otherN.get());
 
-                        if (otherCollider == nullptr) {
-                            continue;
-                        }
+                            if (otherCollider == nullptr) {
+                                continue;
+                            }
 
-                        if (otherCollider->type == ColliderType::Sensor) {
-                            continue;
-                        }
+                            if (otherCollider->type == ColliderType::Sensor) {
+                                continue;
+                            }
 
-                        auto collision = CollisionHit{0, Vector2{}};
+                            auto collision = CollisionHit{0, Vector2{}};
 
-                        switch (collider->shape.type) {
-                            case Shape::Type::RECTANGLE:
-                                switch (otherCollider->shape.type) {
-                                    case Shape::Type::RECTANGLE:
-                                        break;
-                                    case Shape::Type::CIRCLE:
-                                        collision = CircleRectangleCollision(
-                                            otherCollider->GlobalPosition(),
-                                            otherCollider->shape.circle.radius,
-                                            newPosition,
-                                            collider->shape.rect.size
-                                        );
-                                        break;
+                            switch (collider->shape.type) {
+                                case Shape::Type::RECTANGLE:
+                                    switch (otherCollider->shape.type) {
+                                        case Shape::Type::RECTANGLE:
+                                            collision = RectangleRectangleCollision(
+                                                otherCollider->GlobalPosition(),
+                                                otherCollider->shape.rect.size,
+                                                newPosition,
+                                                collider->shape.rect.size
+                                            );
+                                            break;
+                                        case Shape::Type::CIRCLE:
+                                            collision = CircleRectangleCollision(
+                                                otherCollider->GlobalPosition(),
+                                                otherCollider->shape.circle.radius,
+                                                newPosition,
+                                                collider->shape.rect.size
+                                            );
+                                            break;
+                                    }
+                                    break;
+                                case Shape::Type::CIRCLE:
+                                    switch (otherCollider->shape.type) {
+                                        case Shape::Type::RECTANGLE:
+                                            collision = CircleRectangleCollision(
+                                                newPosition,
+                                                collider->shape.circle.radius,
+                                                otherCollider->GlobalPosition(),
+                                                otherCollider->shape.rect.size
+                                            );
+                                            break;
+                                        case Shape::Type::CIRCLE:
+                                            break;
+                                    }
+                                    break;
+                            }
+
+                            if (collision.penetration > 0) {
+                                auto d = Vector2DotProduct(this->velocity, collision.normal);
+                                if (d < 0) {
+                                    this->velocity.x += collision.normal.x * collision.penetration;
+                                    this->velocity.y += collision.normal.y * collision.penetration;
+                                } else {
+                                    this->velocity.x -= collision.normal.x * collision.penetration;
+                                    this->velocity.y -= collision.normal.y * collision.penetration;
                                 }
-                                break;
-                            case Shape::Type::CIRCLE:
-                                switch (otherCollider->shape.type) {
-                                    case Shape::Type::RECTANGLE:
-                                        collision = CircleRectangleCollision(
-                                            newPosition,
-                                            collider->shape.circle.radius,
-                                            otherCollider->GlobalPosition(),
-                                            otherCollider->shape.rect.size
-                                        );
-                                        break;
-                                    case Shape::Type::CIRCLE:
-                                        break;
-                                }
-                                break;
-                        }
-
-                        if (collision.penetration > 0) {
-                            auto d = Vector2DotProduct(this->velocity, collision.normal);
-                            if (d < 0) {
-                                this->velocity.x += collision.normal.x * collision.penetration;
-                                this->velocity.y += collision.normal.y * collision.penetration;
-                            } else {
-                                this->velocity.x -= collision.normal.x * collision.penetration;
-                                this->velocity.y -= collision.normal.y * collision.penetration;
                             }
                         }
                     }
